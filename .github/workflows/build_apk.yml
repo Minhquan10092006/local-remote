@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -42,11 +44,15 @@ jobs:
           cd app
           flutter build apk --release
 
-      - name: Upload Release APK
+      - name: Rename APK for Release
+        run: |
+          cp app/build/app/outputs/flutter-apk/app-release.apk app/RemoteDesktop-Android-v2.0.0.apk
+
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: RemoteDesktop-Release-APK
-          path: app/build/app/outputs/flutter-apk/*.apk
+          path: app/RemoteDesktop-Android-v2.0.0.apk
           retention-days: 14
 
   build_windows:
@@ -102,3 +108,46 @@ jobs:
           name: RemoteDesktop-Windows-x64
           path: app/RemoteDesktop-Windows-x64.zip
           retention-days: 14
+
+  publish_release:
+    name: Publish to GitHub Releases
+    needs: [build_apk, build_windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Android APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: RemoteDesktop-Release-APK
+          path: ./release_assets
+
+      - name: Download Windows Zip Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: RemoteDesktop-Windows-x64
+          path: ./release_assets
+
+      - name: Publish or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.0
+          name: "Remote Desktop Local v2.0.0"
+          body: |
+            ## Remote Desktop Local v2.0.0 Official Release
+
+            ### 📦 Download Links:
+            - 📱 **Android Phone**: `RemoteDesktop-Android-v2.0.0.apk`
+            - 💻 **Windows PC**: `RemoteDesktop-Windows-x64.zip`
+
+            ### 🚀 Features:
+            - DXGI Screen capture & WASAPI loopback audio
+            - Multi-touch virtual trackpad & on-screen shortcut toolbar
+            - 5-Layer Security with PIN gate and Kill Switch banner
+          files: |
+            ./release_assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
