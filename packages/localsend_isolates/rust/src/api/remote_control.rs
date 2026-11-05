@@ -15,11 +15,13 @@ use localsend_core::remote_control::{
     clipboard::ClipboardSync,
 };
 
+use crate::frb_generated::StreamSink;
+
 struct HostContext {
     session: RcSession,
     injector: HidInjector,
     clipboard: ClipboardSync,
-    event_sink: Option<flutter_rust_bridge::StreamSink<String>>,
+    event_sink: Option<StreamSink<String>>,
 }
 
 lazy_static! {
@@ -36,7 +38,7 @@ pub fn start_rc_host(
     target_fps: u32,
     screen_width: u32,
     screen_height: u32,
-    event_sink: flutter_rust_bridge::StreamSink<String>,
+    event_sink: StreamSink<String>,
 ) -> Result<(), String> {
     let mut config = RcSessionConfig::default();
     config.target_fps = target_fps;
@@ -197,4 +199,3 @@ pub fn poll_host_status_json() -> String {
         json!({ "running": false }).to_string()
     }
 }
-

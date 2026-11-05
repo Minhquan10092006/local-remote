@@ -31,13 +31,13 @@ class _RcClientPageState extends State<RcClientPage> {
     });
   }
 
-  void _handleScreenTapDown(TapDownDetails details, Size viewportSize, WidgetRef ref) {
+  void _handleScreenTapDown(TapDownDetails details, Size viewportSize) {
     if (!_isDirectTouch) return;
     // Normalized absolute mouse coordinate [0.0, 1.0]
     final normX = (details.localPosition.dx / viewportSize.width).clamp(0.0, 1.0);
     final normY = (details.localPosition.dy / viewportSize.height).clamp(0.0, 1.0);
 
-    final clientNotifier = ref.notifier(rcClientProvider);
+    final clientNotifier = context.notifier(rcClientProvider);
     clientNotifier.sendInput(RcMouseAbsolute(x: normX, y: normY));
     clientNotifier.sendInput(const RcMouseButton(button: MouseButtonType.Left, pressed: true));
     Future.delayed(const Duration(milliseconds: 30), () {
@@ -54,186 +54,179 @@ class _RcClientPageState extends State<RcClientPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final vm = context.watch(rcClientProvider);
+    final clientNotifier = context.notifier(rcClientProvider);
 
-    return ViewModelBuilder(
-      provider: rcClientProvider,
-      builder: (context, vm, ref) {
-        final clientNotifier = ref.notifier(rcClientProvider);
-
-        return Scaffold(
-          backgroundColor: Colors.black,
-          appBar: _isFullscreen
-              ? null
-              : AppBar(
-                  backgroundColor: theme.colorScheme.surface,
-                  elevation: 1,
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      clientNotifier.disconnect();
-                      Navigator.of(context).pop();
-                    },
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: _isFullscreen
+          ? null
+          : AppBar(
+              backgroundColor: theme.colorScheme.surface,
+              elevation: 1,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  clientNotifier.disconnect();
+                  Navigator.of(context).pop();
+                },
+              ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.device.alias,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  Row(
                     children: [
-                      Text(
-                        widget.device.alias,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${widget.device.ip} • ${vm.latencyMs}ms',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 6),
+                      Text(
+                        '${widget.device.ip} • ${vm.latencyMs}ms',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
-                  actions: [
-                    // Direct touch vs trackpad mode toggle
-                    IconButton(
-                      tooltip: _isDirectTouch ? 'Chế độ cảm ứng trực tiếp' : 'Chế độ Trackpad',
-                      icon: Icon(_isDirectTouch ? Icons.touch_app : Icons.mouse),
-                      onPressed: () => setState(() => _isDirectTouch = !_isDirectTouch),
-                    ),
-                    // Audio toggle
-                    IconButton(
-                      tooltip: vm.isAudioEnabled ? 'Tắt âm thanh' : 'Bật âm thanh',
-                      icon: Icon(vm.isAudioEnabled ? Icons.volume_up : Icons.volume_off),
-                      onPressed: clientNotifier.toggleAudio,
-                    ),
-                    // Fullscreen toggle
-                    IconButton(
-                      tooltip: 'Toàn màn hình',
-                      icon: const Icon(Icons.fullscreen),
-                      onPressed: _toggleFullscreen,
-                    ),
-                    // Disconnect
-                    IconButton(
-                      tooltip: 'Ngắt kết nối',
-                      icon: const Icon(Icons.close, color: Colors.redAccent),
-                      onPressed: () {
-                        clientNotifier.disconnect();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ],
+                ],
+              ),
+              actions: [
+                // Direct touch vs trackpad mode toggle
+                IconButton(
+                  tooltip: _isDirectTouch ? 'Chế độ cảm ứng trực tiếp' : 'Chế độ Trackpad',
+                  icon: Icon(_isDirectTouch ? Icons.touch_app : Icons.mouse),
+                  onPressed: () => setState(() => _isDirectTouch = !_isDirectTouch),
                 ),
-          body: SafeArea(
-            top: !_isFullscreen,
-            bottom: !_isFullscreen,
-            child: Column(
-              children: [
-                // Stream Viewport (16:9 aspect ratio or flexible)
-                Expanded(
-                  flex: 5,
-                  child: Container(
-                    color: Colors.black,
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return GestureDetector(
-                          onTapDown: (details) => _handleScreenTapDown(
-                            details,
-                            Size(constraints.maxWidth, constraints.maxHeight),
-                            ref,
-                          ),
-                          child: AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF1E1E1E),
-                                border: Border.all(color: Colors.white12),
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Live Stream surface / placeholder
-                                  Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.desktop_windows,
-                                        size: 64,
-                                        color: Colors.white.withOpacity(0.2),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'Khung hình máy tính truyền về (16:9)',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.5),
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Độ phân giải: 1920x1080 @ 60 FPS',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.3),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (_isFullscreen)
-                                    Positioned(
-                                      top: 10,
-                                      right: 10,
-                                      child: IconButton(
-                                        icon: const Icon(Icons.fullscreen_exit, color: Colors.white70),
-                                        onPressed: _toggleFullscreen,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                // Audio toggle
+                IconButton(
+                  tooltip: vm.isAudioEnabled ? 'Tắt âm thanh' : 'Bật âm thanh',
+                  icon: Icon(vm.isAudioEnabled ? Icons.volume_up : Icons.volume_off),
+                  onPressed: clientNotifier.toggleAudio,
                 ),
-
-                // Keyboard Toolbar
-                KeyboardToolbarWidget(
-                  activeModifiers: vm.activeModifiers,
-                  onToggleModifier: clientNotifier.toggleModifier,
-                  onSendInput: clientNotifier.sendInput,
-                  onClearModifiers: clientNotifier.clearModifiers,
+                // Fullscreen toggle
+                IconButton(
+                  tooltip: 'Toàn màn hình',
+                  icon: const Icon(Icons.fullscreen),
+                  onPressed: _toggleFullscreen,
                 ),
-
-                // Virtual Trackpad
-                Expanded(
-                  flex: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: TouchPadWidget(
-                      onSendInput: clientNotifier.sendInput,
-                    ),
-                  ),
+                // Disconnect
+                IconButton(
+                  tooltip: 'Ngắt kết nối',
+                  icon: const Icon(Icons.close, color: Colors.redAccent),
+                  onPressed: () {
+                    clientNotifier.disconnect();
+                    Navigator.of(context).pop();
+                  },
                 ),
               ],
             ),
-          ),
-        );
-      },
+      body: SafeArea(
+        top: !_isFullscreen,
+        bottom: !_isFullscreen,
+        child: Column(
+          children: [
+            // Stream Viewport (16:9 aspect ratio or flexible)
+            Expanded(
+              flex: 5,
+              child: Container(
+                color: Colors.black,
+                width: double.infinity,
+                alignment: Alignment.center,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return GestureDetector(
+                      onTapDown: (details) => _handleScreenTapDown(
+                        details,
+                        Size(constraints.maxWidth, constraints.maxHeight),
+                      ),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            border: Border.all(color: Colors.white12),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Live Stream surface / placeholder
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.desktop_windows,
+                                    size: 64,
+                                    color: Colors.white.withOpacity(0.2),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Khung hình máy tính truyền về (16:9)',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.5),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Độ phân giải: 1920x1080 @ 60 FPS',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.3),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_isFullscreen)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.fullscreen_exit, color: Colors.white70),
+                                    onPressed: _toggleFullscreen,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Keyboard Toolbar
+            KeyboardToolbarWidget(
+              activeModifiers: vm.activeModifiers,
+              onToggleModifier: clientNotifier.toggleModifier,
+              onSendInput: clientNotifier.sendInput,
+              onClearModifiers: clientNotifier.clearModifiers,
+            ),
+
+            // Virtual Trackpad
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TouchPadWidget(
+                  onSendInput: clientNotifier.sendInput,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
-

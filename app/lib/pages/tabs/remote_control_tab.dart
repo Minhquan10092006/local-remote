@@ -33,7 +33,7 @@ class _RemoteControlTabState extends State<RemoteControlTab> with SingleTickerPr
     super.dispose();
   }
 
-  void _showDirectConnectDialog(BuildContext context, WidgetRef ref) {
+  void _showDirectConnectDialog(BuildContext context) {
     final ipController = TextEditingController();
     final pinController = TextEditingController();
 
@@ -89,7 +89,7 @@ class _RemoteControlTabState extends State<RemoteControlTab> with SingleTickerPr
               );
 
               Navigator.of(ctx).pop();
-              _connectToDevice(context, ref, device, pin: pinController.text.trim());
+              _connectToDevice(context, device, pin: pinController.text.trim());
             },
             child: const Text('Kết nối'),
           ),
@@ -98,8 +98,8 @@ class _RemoteControlTabState extends State<RemoteControlTab> with SingleTickerPr
     );
   }
 
-  void _connectToDevice(BuildContext context, WidgetRef ref, RcDevice device, {String? pin}) async {
-    final clientNotifier = ref.notifier(rcClientProvider);
+  void _connectToDevice(BuildContext context, RcDevice device, {String? pin}) async {
+    final clientNotifier = context.notifier(rcClientProvider);
     final success = await clientNotifier.connect(device, pin: pin);
     if (success && mounted) {
       Navigator.of(context).push(
@@ -162,7 +162,7 @@ class _RemoteControlTabState extends State<RemoteControlTab> with SingleTickerPr
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Kết nối trực tiếp bằng IP',
-            onPressed: () => _showDirectConnectDialog(context, context.ref),
+            onPressed: () => _showDirectConnectDialog(context),
           ),
         ],
       ),
@@ -344,7 +344,7 @@ class _RemoteControlTabState extends State<RemoteControlTab> with SingleTickerPr
                           style: FilledButton.tonalStyleFrom(
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          onPressed: () => _connectToDevice(context, context.ref, dev),
+                          onPressed: () => _connectToDevice(context, dev),
                           child: const Text('Kết nối'),
                         ),
                       ),

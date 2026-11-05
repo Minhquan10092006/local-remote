@@ -15,15 +15,19 @@ class _RcHostPageState extends State<RcHostPage> {
   late TextEditingController _pinController;
   late int _targetFps;
   late bool _requireApproval;
+  bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    final config = ref.read(rcHostProvider).config;
-    _requirePin = config.pin != null && config.pin!.isNotEmpty;
-    _pinController = TextEditingController(text: config.pin ?? '');
-    _targetFps = config.targetFps;
-    _requireApproval = config.requireApproval;
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      final config = context.ref.read(rcHostProvider).config;
+      _requirePin = config.pin != null && config.pin!.isNotEmpty;
+      _pinController = TextEditingController(text: config.pin ?? '');
+      _targetFps = config.targetFps;
+      _requireApproval = config.requireApproval;
+      _initialized = true;
+    }
   }
 
   @override
@@ -41,14 +45,14 @@ class _RcHostPageState extends State<RcHostPage> {
       return;
     }
 
-    final currentConfig = ref.read(rcHostProvider).config;
+    final currentConfig = context.ref.read(rcHostProvider).config;
     final updatedConfig = currentConfig.copyWith(
       pin: newPin,
       targetFps: _targetFps,
       requireApproval: _requireApproval,
     );
 
-    ref.notifier(rcHostProvider).updateConfig(updatedConfig);
+    context.notifier(rcHostProvider).updateConfig(updatedConfig);
     Navigator.of(context).pop();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -59,6 +63,12 @@ class _RcHostPageState extends State<RcHostPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (!_initialized) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -79,50 +89,53 @@ class _RcHostPageState extends State<RcHostPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.lock_outline, color: theme.colorScheme.primary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Bảo mật mã PIN',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Yêu cầu nhập đúng PIN để kết nối',
-                            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
-                          ),
-                        ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.lock_outline, color: theme.colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Bảo mật mã PIN',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Yêu cầu nhập đúng PIN để kết nối',
+                              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _requirePin,
+                        onChanged: (val) {
+                          setState(() => _requirePin = val);
+                        },
+                      ),
+                    ],
+                  ),
+                  if (_requirePin) ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _pinController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 8,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Mã PIN (4 - 8 chữ số)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        prefixIcon: const Icon(Icons.key),
+                        counterText: '',
                       ),
                     ),
-                    Switch(
-                      value: _requirePin,
-                      onChanged: (val) {
-                        setState(() => _requirePin = val);
-                      },
-                    ),
                   ],
-                ),
-                if (_requirePin) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _pinController,
-                    keyboardType: TextInputType.number,
-                    maxLength: 8,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: 'Mã PIN (4 - 8 chữ số)',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      prefixIcon: const Icon(Icons.key),
-                      counterText: '',
-                    ),
-                  ),
                 ],
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -132,30 +145,33 @@ class _RcHostPageState extends State<RcHostPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.speed, color: theme.colorScheme.primary),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Tốc độ khung hình (FPS)',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment(value: 30, label: Text('30 FPS')),
-                    ButtonSegment(value: 50, label: Text('50 FPS')),
-                    ButtonSegment(value: 60, label: Text('60 FPS')),
-                  ],
-                  selected: {_targetFps},
-                  onSelectionChanged: (val) {
-                    setState(() => _targetFps = val.first);
-                  },
-                ),
-              ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.speed, color: theme.colorScheme.primary),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Tốc độ khung hình (FPS)',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 30, label: Text('30 FPS')),
+                      ButtonSegment(value: 50, label: Text('50 FPS')),
+                      ButtonSegment(value: 60, label: Text('60 FPS')),
+                    ],
+                    selected: {_targetFps},
+                    onSelectionChanged: (val) {
+                      setState(() => _targetFps = val.first);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -177,4 +193,3 @@ class _RcHostPageState extends State<RcHostPage> {
     );
   }
 }
-
