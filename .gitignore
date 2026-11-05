@@ -1,0 +1,29 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# Rust / Cargo
+target/
+**/target/
+
+# Android
+.gradle/
+**/android/.gradle/
+local.properties
+**/android/local.properties
+app/build/
+*.keystore
+
+# Windows
+**/ephemeral/
+*.user
+*.suo
+
+# System / IDE
+.DS_Store
+Thumbs.db

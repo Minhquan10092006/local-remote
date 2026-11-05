@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "packages/core",
+    "packages/localsend_isolates/rust",
+]
+resolver = "2"
+

@@ -1,0 +1,12 @@
+name: localsend_workspace
+description: "LocalSend Remote Desktop Workspace"
+publish_to: "none"
+version: 2.0.0
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+workspace:
+  - app
+  - packages/localsend_isolates
+

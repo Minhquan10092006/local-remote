@@ -1,0 +1,14 @@
+name: localsend_isolates
+description: "FFI Bridge between Flutter and Rust for LocalSend"
+version: 2.0.0
+publish_to: "none"
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_rust_bridge: ^2.12.0
+

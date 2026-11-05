@@ -1,0 +1,4 @@
+target_name: rust_lib_localsend_app
+manifest_dir: ../../rust
+lib_name: rust_lib_localsend_app
+
