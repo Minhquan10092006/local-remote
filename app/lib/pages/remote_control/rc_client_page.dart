@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:refena_flutter/refena_flutter.dart';
@@ -19,6 +21,58 @@ class RcClientPage extends StatefulWidget {
 class _RcClientPageState extends State<RcClientPage> {
   bool _isFullscreen = false;
   bool _isDirectTouch = false;
+  bool _isStreaming = true;
+  Uint8List? _currentFrame;
+  int _fpsCount = 0;
+  DateTime _lastFpsTime = DateTime.now();
+  int _currentFps = 0;
+  HttpClient? _streamClient;
+
+  @override
+  void initState() {
+    super.initState();
+    _startStreamLoop();
+  }
+
+  void _startStreamLoop() async {
+    _streamClient = HttpClient()..connectionTimeout = const Duration(seconds: 2);
+    while (mounted && _isStreaming) {
+      final start = DateTime.now();
+      try {
+        final uri = Uri.parse('http://${widget.device.ip}:${widget.device.port}/screen/frame?t=${start.millisecondsSinceEpoch}');
+        final req = await _streamClient!.getUrl(uri);
+        final resp = await req.close();
+        if (resp.statusCode == 200 && mounted) {
+          final bytes = await resp.fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
+          if (mounted && bytes.isNotEmpty) {
+            setState(() {
+              _currentFrame = Uint8List.fromList(bytes);
+              _fpsCount++;
+            });
+          }
+        }
+      } catch (_) {
+        await Future.delayed(const Duration(milliseconds: 60));
+      }
+
+      final now = DateTime.now();
+      if (now.difference(_lastFpsTime).inSeconds >= 1) {
+        if (mounted) {
+          setState(() {
+            _currentFps = _fpsCount;
+            _fpsCount = 0;
+            _lastFpsTime = now;
+          });
+        }
+      }
+
+      final elapsed = DateTime.now().difference(start).inMilliseconds;
+      final waitMs = 33 - elapsed;
+      if (waitMs > 0) {
+        await Future.delayed(Duration(milliseconds: waitMs));
+      }
+    }
+  }
 
   void _toggleFullscreen() {
     setState(() {
@@ -33,7 +87,6 @@ class _RcClientPageState extends State<RcClientPage> {
 
   void _handleScreenTapDown(TapDownDetails details, Size viewportSize) {
     if (!_isDirectTouch) return;
-    // Normalized absolute mouse coordinate [0.0, 1.0]
     final normX = (details.localPosition.dx / viewportSize.width).clamp(0.0, 1.0);
     final normY = (details.localPosition.dy / viewportSize.height).clamp(0.0, 1.0);
 
@@ -45,8 +98,19 @@ class _RcClientPageState extends State<RcClientPage> {
     });
   }
 
+  void _handleScreenPanUpdate(DragUpdateDetails details, Size viewportSize) {
+    if (!_isDirectTouch) return;
+    final normX = (details.localPosition.dx / viewportSize.width).clamp(0.0, 1.0);
+    final normY = (details.localPosition.dy / viewportSize.height).clamp(0.0, 1.0);
+
+    final clientNotifier = context.notifier(rcClientProvider);
+    clientNotifier.sendInput(RcMouseAbsolute(x: normX, y: normY));
+  }
+
   @override
   void dispose() {
+    _isStreaming = false;
+    _streamClient?.close(force: true);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -91,7 +155,7 @@ class _RcClientPageState extends State<RcClientPage> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '${widget.device.ip} • ${vm.latencyMs}ms',
+                        '${widget.device.ip} • ${vm.latencyMs}ms • $_currentFps FPS',
                         style: TextStyle(
                           fontSize: 11,
                           color: theme.colorScheme.onSurfaceVariant,
@@ -136,7 +200,7 @@ class _RcClientPageState extends State<RcClientPage> {
         bottom: !_isFullscreen,
         child: Column(
           children: [
-            // Stream Viewport (16:9 aspect ratio or flexible)
+            // Stream Viewport (16:9 aspect ratio)
             Expanded(
               flex: 5,
               child: Container(
@@ -145,48 +209,73 @@ class _RcClientPageState extends State<RcClientPage> {
                 alignment: Alignment.center,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
+                    final vpSize = Size(constraints.maxWidth, constraints.maxHeight);
                     return GestureDetector(
-                      onTapDown: (details) => _handleScreenTapDown(
-                        details,
-                        Size(constraints.maxWidth, constraints.maxHeight),
-                      ),
+                      onTapDown: (details) => _handleScreenTapDown(details, vpSize),
+                      onPanUpdate: (details) => _handleScreenPanUpdate(details, vpSize),
                       child: AspectRatio(
                         aspectRatio: 16 / 9,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
+                            color: const Color(0xFF151515),
                             border: Border.all(color: Colors.white12),
                           ),
                           child: Stack(
+                            fit: StackFit.expand,
                             alignment: Alignment.center,
                             children: [
-                              // Live Stream surface / placeholder
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.desktop_windows,
-                                    size: 64,
-                                    color: Colors.white.withOpacity(0.2),
+                              // Live Screen Stream Frame
+                              if (_currentFrame != null)
+                                Image.memory(
+                                  _currentFrame!,
+                                  gaplessPlayback: true,
+                                  fit: BoxFit.contain,
+                                )
+                              else
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(color: theme.colorScheme.primary),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      'Đang kết nối tới máy tính (${widget.device.ip})...',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Đang nhận hình ảnh màn hình trực tiếp',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.4),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                              // FPS tag overlay
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'Khung hình máy tính truyền về (16:9)',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
-                                      fontSize: 13,
+                                  child: Text(
+                                    '$_currentFps FPS',
+                                    style: const TextStyle(
+                                      color: Colors.greenAccent,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Độ phân giải: 1920x1080 @ 60 FPS',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.3),
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
+
                               if (_isFullscreen)
                                 Positioned(
                                   top: 10,
