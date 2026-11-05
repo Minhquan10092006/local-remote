@@ -39,6 +39,10 @@ jobs:
         run: |
           flutter pub get
 
+      - name: Generate Release Keystore
+        run: |
+          keytool -genkey -v -keystore app/android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=LocalSend, OU=Remote, O=LocalSend, L=Unknown, S=Unknown, C=US"
+
       - name: Build Android Release APK
         run: |
           cd app
