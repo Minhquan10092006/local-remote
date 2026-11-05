@@ -31,7 +31,7 @@ class LocalSendApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -54,7 +54,7 @@ class LocalSendApp extends StatelessWidget {
           seedColor: const Color(0xFF006A60),
           brightness: Brightness.dark,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -66,4 +66,3 @@ class LocalSendApp extends StatelessWidget {
     );
   }
 }
-

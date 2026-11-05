@@ -341,7 +341,7 @@ class _RemoteControlTabState extends State<RemoteControlTab> with SingleTickerPr
                         ),
                         subtitle: Text('${dev.ip}:${dev.port} • ${dev.os}'),
                         trailing: FilledButton.tonal(
-                          style: FilledButton.tonalStyleFrom(
+                          style: FilledButton.styleFrom(
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           onPressed: () => _connectToDevice(context, dev),

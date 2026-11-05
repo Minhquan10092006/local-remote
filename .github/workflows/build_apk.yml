@@ -80,6 +80,11 @@ jobs:
         run: |
           cargo build --release --manifest-path packages/localsend_isolates/rust/Cargo.toml --target x86_64-pc-windows-msvc
 
+      - name: Scaffold Windows Runner
+        run: |
+          cd app
+          flutter create . --platforms=windows --org org.localsend
+
       - name: Build Windows Executable
         env:
           CARGOKIT_VERBOSE: '1'

@@ -21,10 +21,19 @@ else()
   endif()
 endif()
 
+function(APPLY_STANDARD_SETTINGS TARGET)
+  target_compile_features(${TARGET} PUBLIC cxx_std_17)
+  target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
+  target_compile_options(${TARGET} PRIVATE /EHsc)
+  target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
+  target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
+endfunction()
+
 set(CMAKE_EXE_LINKER_FLAGS_PROFILE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 
 include(flutter/generated_plugins.cmake)
 
 # Application build
-add_subdirectory(runner)
-
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/runner/CMakeLists.txt")
+  add_subdirectory(runner)
+endif()
