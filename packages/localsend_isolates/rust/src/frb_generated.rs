@@ -19,3 +19,4 @@ impl<T> StreamSink<T> {
 
 unsafe impl<T> Send for StreamSink<T> {}
 unsafe impl<T> Sync for StreamSink<T> {}
+
