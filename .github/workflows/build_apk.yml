@@ -35,8 +35,6 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd packages/localsend_isolates/rust_builder/cargokit/build_tool && flutter pub get || true
-          cd ${{ github.workspace }}
           flutter pub get
 
       - name: Build Android Release APK
@@ -76,9 +74,6 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd packages/localsend_isolates/rust_builder/cargokit/build_tool || true
-          flutter pub get || true
-          cd ${{ github.workspace }}
           flutter pub get
 
       - name: Build Rust Isolates Library
@@ -102,4 +97,3 @@ jobs:
           name: RemoteDesktop-Windows-x64
           path: app/RemoteDesktop-Windows-x64.zip
           retention-days: 14
-
